@@ -10,7 +10,10 @@ export const useChatStore = create((set) => ({
   changeChat: (chatId, user) => {
     const currentUser = useUserStore.getState().currentUser;
 
-    if (user.blocked.includes(currentUser.id)) {
+    const userBlocked = user?.blocked || [];
+    const currentUserBlocked = currentUser?.blocked || [];
+
+    if (userBlocked.includes(currentUser.id)) {
       return set({
         chatId,
         user: null,
@@ -19,7 +22,7 @@ export const useChatStore = create((set) => ({
       });
     }
 
-    if (currentUser.blocked.includes(user.id)) {
+    if (currentUserBlocked.includes(user.id)) {
       return set({
         chatId,
         user: null,
@@ -28,23 +31,13 @@ export const useChatStore = create((set) => ({
       });
     }
 
-    // Se ninguém está bloqueado, segue com o chat normalmente
-  else if (currentUser.blocked.includes(user.id)) {
     return set({
       chatId,
       user,
       isCurrentUserBlocked: false,
       isReceiverBlocked: false,
     });
-  } else{
-  return set({
-    chatId,
-    user,
-    isCurrentUserBlocked: false,
-    isReceiverBlocked: false,
-  });
- }
-}, 
+  },
 
   changeBlock: () => {
     set((state) => ({
@@ -53,6 +46,7 @@ export const useChatStore = create((set) => ({
     }));
   },
 }));
+
 
 
 

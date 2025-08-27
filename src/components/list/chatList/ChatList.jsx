@@ -1,58 +1,39 @@
 import { useState, useEffect } from "react";
 import "./chatList.css";
-import AddUser from "./addUser/addUser";
-import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import AddFile from "./addFile/addFile"; 
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../../../lib/firebase";
-import { useUserStore } from "../../../lib/userStore";
 import { useChatStore } from "../../../lib/chatStore";
-
+import { useUserStore } from "../../../lib/userStore";
 
 const ChatList = () => {
   const [addMode, setAddMode] = useState(false);
   const [input, setInput] = useState("");
-  const [chats, setChats] = useState([]);
-  const [currentScreen, setCurrentScreen] = useState("chatList"); // Tela atual
+  const [sessions, setSessions] = useState([]);
+  const [currentScreen, setCurrentScreen] = useState("chatList");
 
   const { currentUser } = useUserStore();
-  const { chatId, changeChat } = useChatStore();
+  const { changeChat } = useChatStore();
 
+  // Pega sessões do usuário
   useEffect(() => {
     if (!currentUser?.id) return;
 
-    const unSub = onSnapshot(doc(db, "userchats", currentUser.id), async (res) => {
-      const items = res.data()?.chats || [];
-
-      const promises = items.map(async (item) => {
-        const userDocRef = doc(db, "users", item.receiverId);
-        const userDocSnap = await getDoc(userDocRef);
-        const user = userDocSnap.data();
-        return { ...item, user };
-      });
-
-      const chatData = await Promise.all(promises);
-      setChats(chatData.sort((a, b) => b.updateAt - a.updateAt));
+    const unSub = onSnapshot(doc(db, "userSessions", currentUser.id), async (res) => {
+      const items = res.data()?.sessions || [];
+      setSessions(items.sort((a, b) => b.updateAt - a.updateAt));
     });
 
     return () => unSub();
   }, [currentUser?.id]);
 
-  const handleSelect = async (chat) => {
-    const userChats = chats.map(({ user, ...rest }) => rest);
-    const chatIndex = userChats.findIndex((item) => item.chatId === chat.chatId);
-    if (chatIndex >= 0) userChats[chatIndex].isSeen = true;
-
-    const userChatsRef = doc(db, "userchats", currentUser.id);
-    try {
-      await updateDoc(userChatsRef, { chats: userChats });
-      changeChat(chat.chatId, chat.user);
-      setCurrentScreen("chatDetail"); 
-    } catch (err) {
-      console.log(err);
-    }
+  const handleSelect = (session) => {
+    changeChat(session.sessionId, session.fileName);
+    setCurrentScreen("chatDetail");
   };
 
-  const filteredChats = chats.filter((c) =>
-    c.user.username.toLowerCase().includes(input.toLowerCase())
+  const filteredSessions = sessions.filter((s) =>
+    s.fileName.toLowerCase().includes(input.toLowerCase())
   );
 
   return (
@@ -81,26 +62,27 @@ const ChatList = () => {
         )}
       </div>
 
-      {filteredChats.map((chat) => (
+      {filteredSessions.map((session) => (
         <div
           className="item"
-          key={chat.chatId}
-          onClick={() => handleSelect(chat)}
+          key={session.sessionId}
+          onClick={() => handleSelect(session)}
           style={{
-            backgroundColor: chat?.isSeen ? "transparent" : "#5193be",
+            backgroundColor: session?.isSeen ? "transparent" : "#5193be",
           }}
         >
-          <img src={chat.user.avatar || "./arquivo.png"} alt="" />
+          <img src="./arquivo.png" alt="" />
           <div className="texts">
-            <span>{chat.user.username}</span>
-            <p>{chat.lastMessage}</p>
+            <span>{session.fileName}</span>
+            <p>{session.lastMessage || "Sem mensagens ainda"}</p>
           </div>
         </div>
       ))}
 
-      {addMode && <AddUser />}
+      {addMode && <AddFile onClose={() => setAddMode(false)} />}
     </div>
   );
 };
 
 export default ChatList;
+

@@ -1,40 +1,51 @@
-import { onSnapshot, doc } from "firebase/firestore";
+import { onSnapshot, doc, updateDoc, arrayUnion, setDoc, getDoc } from "firebase/firestore";
 import "./chat.css";
 import { useEffect, useRef, useState } from "react";
 import { db } from "../../lib/firebase";
-import { useChatStore } from "../../lib/chatStore";
 import { useUserStore } from "../../lib/userStore";
-import { updateDoc, arrayUnion, getDoc } from "firebase/firestore";
-
 
 const Chat = () => {
-  const [chat, setChat] = useState();
+  const [chat, setChat] = useState({ messages: [] });
   const [text, setText] = useState("");
-  const { chatId, user } = useChatStore();
   const { currentUser } = useUserStore();
   const endRef = useRef(null);
 
+  const chatDocRef = doc(db, "chats", currentUser?.id); // chat único por usuário
+  const [session, setSession] = useState(null);
+
+
+  // Scroll automático
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
+  }, [chat]);
 
+  // Carregar chat do Firestore
   useEffect(() => {
-    if (!chatId) return;
+    if (!currentUser?.id) return;
 
-    const unSub = onSnapshot(doc(db, "chats", chatId), (res) => {
+    const initChat = async () => {
+      const docSnap = await getDoc(chatDocRef);
+      if (!docSnap.exists()) {
+        // cria documento se não existir
+        await setDoc(chatDocRef, { messages: [] });
+      }
+    };
+
+    initChat();
+
+    const unSub = onSnapshot(chatDocRef, (res) => {
       setChat(res.data());
     });
 
-    return () => {
-      unSub();
-    };
-  }, [chatId]);
+    return () => unSub();
+  }, [currentUser?.id]);
 
   const handleSend = async () => {
-    if (text === "") return;
+    if (!text) return;
 
     try {
-      await updateDoc(doc(db, "chats", chatId), {
+      // 1️⃣ Salva mensagem do usuário
+      await updateDoc(chatDocRef, {
         messages: arrayUnion({
           senderId: currentUser.id,
           text,
@@ -42,31 +53,52 @@ const Chat = () => {
         }),
       });
 
-      const userIDs = [currentUser.id, user.id];
+      setText("");
 
-      userIDs.forEach(async (id) => {
-        const userChatsRef = doc(db, "userchats", id);
-        const userChatsSnapshot = await getDoc(userChatsRef);
+      // 2️⃣ Prepara payload para IA
+      const payload = {
+        input_value: text,
+        output_type: "chat",
+        input_type: "chat",
+        session_id: currentUser.id,
+      };
 
-        if (userChatsSnapshot.exists()) {
-          const userChatsData = userChatsSnapshot.data();
+      const options = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      };
 
-          const chatIndex = userChatsData.chats.findIndex(
-            (c) => c.chatId === chatId
-          );
+      // 3️⃣ Chama API da IA
+      const response = await fetch(
+        "http://127.0.0.1:7860/api/v1/run/211fb1de-9f5a-4f0a-bec5-c344631e22d5",
+        options
+      );
+      const data = await response.json();
 
-          userChatsData.chats[chatIndex].lastMessage = text;
-          userChatsData.chats[chatIndex].isSeen = 
-            id === currentUser.id ? true : false;
-          userChatsData.chats[chatIndex].updatedAt = Date.now();
-
-          await updateDoc(userChatsRef, {
-            chats: userChatsData.chats,
-          });
+      // 4️⃣ Função recursiva para encontrar texto da IA
+      function findText(obj) {
+        if (!obj || typeof obj !== "object") return null;
+        if ("text" in obj && typeof obj.text === "string") return obj.text;
+        for (const key in obj) {
+          const result = findText(obj[key]);
+          if (result) return result;
         }
+        return null;
+      }
+
+      const respostaIA = findText(data) || "Sem resposta da IA";
+
+      // 5️⃣ Salva a resposta da IA
+      await updateDoc(chatDocRef, {
+        messages: arrayUnion({
+          senderId: "IA",
+          text: respostaIA,
+          createdAt: new Date(),
+        }),
       });
     } catch (err) {
-      console.log(err);
+      console.error("Erro ao enviar mensagem:", err);
     }
   };
 
@@ -74,23 +106,22 @@ const Chat = () => {
     <div className="chat">
       <div className="top">
         <div className="user">
-          <img src={user?.avatar || "./ollama.png"} alt="" />
+          <img src="./ollama.png" alt="" />
           <div className="texts">
             <span>Ollama</span>
-            <p>{user?.username}</p>
+            <p>{session?.fileName || "Sem arquivo carregado"}</p>
           </div>
-        </div>
-        <div className="icons">
-          <img src="./info.png" alt="" />
         </div>
       </div>
 
       <div className="center">
         {chat?.messages?.map((message, index) => (
-          <div className="message own" key={index}>
+          <div
+            className={`message ${message.senderId === currentUser.id ? "own" : "ia"}`}
+            key={index}
+          >
             <div className="texts">
               <p>{message.text}</p>
-              {/* <span>{message}</span> */}
             </div>
           </div>
         ))}
@@ -98,20 +129,23 @@ const Chat = () => {
       </div>
 
       <div className="bottom">
-        <div className="icons">
-        </div>
-        <input 
-          type="text" 
-          placeholder="Digite algo..." 
-          value={text} 
-          onChange={(e) => setText(e.target.value)}/>
-        <button className="sendButton" onClick={handleSend}>Send</button>
+        <input
+          type="text"
+          placeholder="Digite algo..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+        />
+        <button className="sendButton" onClick={handleSend}>
+          Send
+        </button>
       </div>
     </div>
   );
 };
 
 export default Chat;
+
 
 
 

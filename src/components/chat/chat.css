@@ -6,11 +6,11 @@
   display: flex;
   flex-direction: column;
 
+  /* topo */
   .top {
     padding: 20px;
     display: flex;
     align-items: center;
-    border-bottom: 1px solid #dddddd35;
     justify-content: space-between;
     border-bottom: 1px solid #dddddd35;
 
@@ -31,7 +31,7 @@
         flex-direction: column;
         gap: 5px;
 
-        .span {
+        span {
           font-size: 18px;
           font-weight: bold;
         }
@@ -55,53 +55,70 @@
     }
   }
 
+  /* área das mensagens */
   .center {
     padding: 20px;
     flex: 1;
-    overflow: scroll;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 20px;
 
-    .message{
+    .message {
       max-width: 70%;
       display: flex;
-      gap: 20px;
+      gap: 10px;
 
-      &.own{
+      /* usuário */
+      &.own {
         align-self: flex-end;
 
-        .texts{
-          p{
+        .texts {
+          p {
             background-color: #5193be;
+            color: white;
           }
         }
       }
 
-      img{
+      /* IA */
+      &.other {
+        align-self: flex-start;
+
+        .texts {
+          p {
+            background-color: #dcdcdc;
+            color: black;
+          }
+        }
+      }
+
+      img {
         width: 30px;
         height: 30px;
         border-radius: 50%;
         object-fit: cover;
       }
-      .texts{
-        flex: 1;
+
+      .texts {
+        display: flex;
         flex-direction: column;
         gap: 5px;
 
-        p{
-          padding: 20px;
-          background-color: rgba(17, 25, 40, 0.5);
+        p {
+          padding: 12px 15px;
           border-radius: 10px;
+          word-wrap: break-word;
         }
 
-        span{
+        span {
           font-size: 13px;
         }
       }
     }
   }
 
+  /* input e botões */
   .bottom {
     padding: 20px;
     display: flex;
@@ -142,6 +159,7 @@
     }
   }
 }
+
 
 
 
