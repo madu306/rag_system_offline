@@ -3,48 +3,66 @@ import "./chat.css";
 import { useEffect, useRef, useState } from "react";
 import { db } from "../../lib/firebase";
 import { useUserStore } from "../../lib/userStore";
+import { useChatStore } from "../../lib/chatStore";
 
 const Chat = () => {
+  const { chatId } = useChatStore();
+  const { currentUser } = useUserStore();
+
   const [chat, setChat] = useState({ messages: [] });
   const [text, setText] = useState("");
-  const { currentUser } = useUserStore();
-  const endRef = useRef(null);
-
-  const chatDocRef = doc(db, "chats", currentUser?.id); // chat único por usuário
   const [session, setSession] = useState(null);
 
+  const endRef = useRef(null);
+  const chatDocRef = chatId ? doc(db, "chats", chatId) : null;
 
-  // Scroll automático
   useEffect(() => {
+    if (!chatDocRef) return;
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
+  }, [chat, chatDocRef]);
 
-  // Carregar chat do Firestore
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!chatDocRef || !currentUser) {
+      setChat({ messages: [] });
+      return;
+    }
+
+    let unSub;
 
     const initChat = async () => {
-      const docSnap = await getDoc(chatDocRef);
-      if (!docSnap.exists()) {
-        // cria documento se não existir
-        await setDoc(chatDocRef, { messages: [] });
+      try {
+        const docSnap = await getDoc(chatDocRef);
+
+        if (!docSnap.exists()) {
+          await setDoc(chatDocRef, { messages: [] });
+        } else {
+          const data = docSnap.data();
+          setSession({
+            fileName: data.fileName || "Sem arquivo carregado",
+          });
+        }
+      } catch (err) {
+        console.warn("Chat encerrado ou usuário deslogado");
       }
     };
 
     initChat();
 
-    const unSub = onSnapshot(chatDocRef, (res) => {
-      setChat(res.data());
+    unSub = onSnapshot(chatDocRef, (res) => {
+      if (res.exists()) {
+        setChat(res.data());
+      }
     });
 
-    return () => unSub();
-  }, [currentUser?.id]);
+    return () => {
+      if (unSub) unSub();
+    };
+  }, [chatDocRef, currentUser]);
 
   const handleSend = async () => {
-    if (!text) return;
+    if (!currentUser || !text || !chatDocRef) return;
 
     try {
-      // 1️⃣ Salva mensagem do usuário
       await updateDoc(chatDocRef, {
         messages: arrayUnion({
           senderId: currentUser.id,
@@ -55,7 +73,6 @@ const Chat = () => {
 
       setText("");
 
-      // 2️⃣ Prepara payload para IA
       const payload = {
         input_value: text,
         output_type: "chat",
@@ -63,21 +80,18 @@ const Chat = () => {
         session_id: currentUser.id,
       };
 
-      const options = {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      };
-
-      // 3️⃣ Chama API da IA
       const response = await fetch(
         "http://127.0.0.1:7860/api/v1/run/211fb1de-9f5a-4f0a-bec5-c344631e22d5",
-        options
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
       );
+
       const data = await response.json();
 
-      // 4️⃣ Função recursiva para encontrar texto da IA
-      function findText(obj) {
+      const findText = (obj) => {
         if (!obj || typeof obj !== "object") return null;
         if ("text" in obj && typeof obj.text === "string") return obj.text;
         for (const key in obj) {
@@ -85,11 +99,10 @@ const Chat = () => {
           if (result) return result;
         }
         return null;
-      }
+      };
 
       const respostaIA = findText(data) || "Sem resposta da IA";
 
-      // 5️⃣ Salva a resposta da IA
       await updateDoc(chatDocRef, {
         messages: arrayUnion({
           senderId: "IA",
@@ -102,11 +115,17 @@ const Chat = () => {
     }
   };
 
+  if (!currentUser) return null;
+
+  if (!chatId) {
+    return <div className="chat">Selecione uma conversa</div>;
+  }
+
   return (
     <div className="chat">
       <div className="top">
         <div className="user">
-          <img src="./ollama.png" alt="" />
+          <img src="./ollama.png" alt="IA" />
           <div className="texts">
             <span>Ollama</span>
             <p>{session?.fileName || "Sem arquivo carregado"}</p>
@@ -117,15 +136,17 @@ const Chat = () => {
       <div className="center">
         {chat?.messages?.map((message, index) => (
           <div
-            className={`message ${message.senderId === currentUser.id ? "own" : "ia"}`}
             key={index}
+            className={`message ${
+              message.senderId === currentUser.id ? "own" : "ia"
+            }`}
           >
             <div className="texts">
               <p>{message.text}</p>
             </div>
           </div>
         ))}
-        <div ref={endRef}></div>
+        <div ref={endRef} />
       </div>
 
       <div className="bottom">
@@ -145,6 +166,10 @@ const Chat = () => {
 };
 
 export default Chat;
+
+
+
+
 
 
 

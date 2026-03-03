@@ -21,7 +21,7 @@
        background-color: transparent;
        border: none;
        outline: none;
-       color: white;
+       color: rgb(211, 205, 205);
        flex: 1;
       }
 
@@ -32,45 +32,44 @@
     }
 
     .add{
-      width: 32px;
-      height: 32px;
+      width: 32.5px;
+      height: 33px;
       background-color: rgba(17, 25, 40, 0.5);
-      padding: 10px;
-      border-radius: 10px;
+      padding: 9px;
+      border-radius: 13px;
       cursor: pointer;
 
     }
   }
 
-  .item{
+  .item {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 20px;
+    gap: 10px;
+    padding: 10px;
     cursor: pointer;
-    border-bottom: 1px solid #dddddd35;
-
-    img{
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    .texts{
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-
-      span{
-        font-weight: 500;
-      }
-
-      p{
-        font-size: 14px;
-        font-weight: 300;
-      }
-
-    }
+    position: relative;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* separador entre arquivos */
   }
+  
+  .texts span {
+    font-weight: 500;
+    color: white;
+  }
+  
+  .texts p {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+  }
+  
+  .item img {
+    width: 50px;         
+    height: 50px;         
+    max-width: 100%;      
+    max-height: 100%;     
+    object-fit: cover;    
+    border-radius: 25px;   
+  }
+   
 }

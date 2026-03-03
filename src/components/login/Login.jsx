@@ -1,94 +1,55 @@
 import { useState } from "react";
-import "./login.css"; 
+import "./login.css";
 import { toast } from "react-toastify";
-import {createUserWithEmailAndPassword, signInWithEmailAndPassword} from "firebase/auth";
-import { auth,db } from "../../lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../lib/firebase";
+import { usePageStore } from "../../lib/usePageStore";
 
 const Login = () => {
-    const [avatar, setAvatar] = useState({
-        file: null, 
-        url:""
-    })
+  const { goToRegister } = usePageStore();
+  const [loading, setLoading] = useState(false);
 
-    const [loading, setLoading] = useState(false); 
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-    const handleAvatar = (e) =>{
-        if(e.target.files[0]){
-        setAvatar({
-            file:e.target.files[0], 
-            url: URL.createObjectURL(e.target.files[0])
-        })
+    const formData = new FormData(e.target);
+    const { email, password } = Object.fromEntries(formData);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      console.log(err);
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
     }
-  }; 
+  };
 
-    const handleRegister = async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target); 
+  return (
+    <div className="login">
+      <img src="/llama_image.png" alt="Llama" className="llama-image" />
 
-        const {username, email, password} = Object.fromEntries(formData);
+      <div className="item">
+        <h2>Login</h2>
 
-        try{
+        <form onSubmit={handleLogin}>
+          <input type="email" placeholder="Email" name="email" required />
+          <input type="password" placeholder="Senha" name="password" required />
+          <button disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
 
-            const res = await createUserWithEmailAndPassword(auth,email,password)
+        <p className="hint">
+        Não tem conta?{" "}
+        <span className="link" onClick={goToRegister}>
+            Criar uma
+        </span>
+        </p>
+      </div>
+    </div>
+  );
+};
 
-            await setDoc(doc(db,"users",res.user.uid), {
-                username,
-                email,
-                id: res.user.uid, 
-                blocked: []
-         });
-
-            await setDoc(doc(db,"userchats",res.user.uid), {
-                chats: [], 
-            });
-
-        toast.success("Account created! You can login now!")
-        }catch(err){
-            console.log(err)
-            toast.error(err.message)
-        }
-    };
-    
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-
-        const formData = new FormData(e.target); 
-        const {email, password} = Object.fromEntries(formData);
-
-        try{
-         await signInWithEmailAndPassword(auth, email, password);  
-        }catch(err){
-                console.log(err)
-                toast.error(err.message)
-        }
-            finally{
-                setLoading(false)
-            }
-    };
-
-    return( <div className="login">
-        <div className="item">
-            <h2>Login</h2>
-             <form onSubmit={handleLogin}> 
-                <input type="text" placeholder="Email" name="email" />
-                <input type="password" placeholder="Senha" name="password" />
-                <button>Entrar</button>
-            </form>
-        </div>
-        <div className="separator"></div>
-        <div className="item">
-            <h2>Criar uma conta</h2>
-             <form onSubmit={handleRegister}>
-                <input type="texto" placeholder="Nome" name="username" />
-                <input type="texto" placeholder="Email" name="email" />
-                <input type="password" placeholder="Senha" name="password" />
-                <button>Entrar</button>
-            </form>
-        </div>
-    </div> 
-  ); 
-}; 
-
-export default Login; 
+export default Login;

@@ -1,0 +1,17 @@
+.hint {
+    margin-top: -10px;      
+    font-size: 1.0rem;
+    font-style: italic;
+    color: #130e14;       
+  }
+  
+  .link {
+    color: #187ef3;
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 500;
+  }
+  
+  .link:hover {
+    color: #78b8ff;
+  }

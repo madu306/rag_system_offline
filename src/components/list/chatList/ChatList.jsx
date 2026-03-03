@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./chatList.css";
 import AddFile from "./addFile/addFile"; 
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
 import { useUserStore } from "../../../lib/userStore";
+import SessionItem from "./SessionItem";
 
 const ChatList = () => {
   const [addMode, setAddMode] = useState(false);
+  const addRef = useRef(null);
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState([]);
   const [currentScreen, setCurrentScreen] = useState("chatList");
@@ -28,9 +30,23 @@ const ChatList = () => {
   }, [currentUser?.id]);
 
   const handleSelect = (session) => {
-    changeChat(session.sessionId, session.fileName);
+    changeChat(session.chatId, { fileName: session.fileName });
     setCurrentScreen("chatDetail");
   };
+
+  // Fecha o AddFile ao clicar fora
+  useEffect(() => {
+    if (!addMode) return;
+
+    const handleClickOutside = (event) => {
+      if (addRef.current && !addRef.current.contains(event.target)) {
+        setAddMode(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [addMode]);
 
   const filteredSessions = sessions.filter((s) =>
     s.fileName.toLowerCase().includes(input.toLowerCase())
@@ -48,14 +64,12 @@ const ChatList = () => {
           />
         </div>
 
-        <img
-          src={addMode ? "./minus.png" : "./plus.png"}
-          alt=""
-          className="add"
-          onClick={() => setAddMode((prev) => !prev)}
-        />
+        <i
+          className={`fa ${addMode ? "fa-minus-circle" : "fa fa-paperclip"} add`}
+          onClick={() => setAddMode(prev => !prev)}
+        ></i>
 
-        {currentScreen === "chatList" && (
+        {currentScreen === "chatList" && !addMode && (
           <button className="logout" onClick={() => auth.signOut()}>
             Sair
           </button>
@@ -63,26 +77,23 @@ const ChatList = () => {
       </div>
 
       {filteredSessions.map((session) => (
-        <div
-          className="item"
+        <SessionItem
           key={session.sessionId}
-          onClick={() => handleSelect(session)}
-          style={{
-            backgroundColor: session?.isSeen ? "transparent" : "#5193be",
-          }}
-        >
-          <img src="./arquivo.png" alt="" />
-          <div className="texts">
-            <span>{session.fileName}</span>
-            <p>{session.lastMessage || "Sem mensagens ainda"}</p>
-          </div>
-        </div>
+          session={session}
+          onSelect={handleSelect}
+        />
       ))}
 
-      {addMode && <AddFile onClose={() => setAddMode(false)} />}
+      {addMode && (
+        <div ref={addRef}>
+          <AddFile onClose={() => setAddMode(false)} />
+        </div>
+      )}
     </div>
   );
 };
 
 export default ChatList;
+
+
 

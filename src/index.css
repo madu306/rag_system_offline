@@ -19,14 +19,12 @@ body {
   color: rgb(255, 255, 255);
 }
 
-
 .container{
   width: 90vw;
   height: 90vh; 
-  background-color: rgba(97, 98, 102, 0.795);
+  background-color: rgba(97, 98, 102, 0.815);
   backdrop-filter: blur(19px) saturate(180); 
   border-radius: 12px; 
-  border: 1px solid  rgb(75, 100, 236); 
   display: flex; 
 }
 
@@ -36,4 +34,59 @@ body {
   border-radius: 10px; 
   background-color: rgba(52, 116, 57, 0.555); 
 }
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  cursor: pointer;
+  position: relative;
+}
+
+.config-wrapper {
+  margin-left: auto;
+  position: relative;
+}
+
+.config-icon {
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.config-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.config-menu {
+  position: absolute;
+  right: 0;
+  top: 30px;
+  background: rgba(30, 30, 40, 0.95);
+  border-radius: 8px;
+  padding: 6px;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+
+.config-menu button {
+  background: none;
+  border: none;
+  color: white;
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.config-menu button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.config-menu .danger {
+  color: #ff6b6b;
+}
+
 
